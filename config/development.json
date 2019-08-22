@@ -1,0 +1,6 @@
+{
+  "pubsubQueueName": "dev.project.service",
+  "pubsubExchangeName": "dev.projects",
+  "attachmentsS3Bucket": "topcoder-dev-media",
+  "connectProjectsUrl": "https://connect.topcoder-dev.com/projects/"
+}

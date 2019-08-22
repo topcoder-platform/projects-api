@@ -1,0 +1,106 @@
+version: 2
+python_env: &python_env
+  docker:
+    - image: circleci/python:2.7-stretch-browsers
+    
+install_awscli: &install_awscli
+  name: "Install awscli"
+  command: |
+    sudo pip install awscli --upgrade
+install_deploysuite: &install_deploysuite
+          name: Installation of install_deploysuite.
+          command: |
+            git clone --branch master https://github.com/topcoder-platform/tc-deploy-scripts ../buildscript
+            cp ./../buildscript/master_deploy.sh .
+            cp ./../buildscript/buildenv.sh .
+            cp ./../buildscript/awsconfiguration.sh .
+            
+# Instructions of deployment
+deploy_steps: &deploy_steps
+  - checkout
+  - attach_workspace:
+      at: ./workspace
+  - run: *install_awscli
+  - run: *install_deploysuite
+  - setup_remote_docker
+  - run: docker build -t tc-project-service:latest .
+  - deploy:
+      name: "Running Masterscript -  deploy tc-project-service " 
+      command: |
+        ./awsconfiguration.sh $DEPLOY_ENV  
+        source awsenvconf
+        ./buildenv.sh -e $DEPLOY_ENV -b ${VAR_ENV}-tc-project-service-deployvar
+        source buildenvvar
+        ./master_deploy.sh -d ECS -e $DEPLOY_ENV -t latest -s ${VAR_ENV}-global-appvar,${VAR_ENV}-tc-project-service-appvar -i tc-project-service -p FARGATE 
+
+        echo "======= Running Masterscript - deploy tc-project-service-consumers ==========="
+        if [ -e ${VAR_ENV}-tc-project-service-appvar.json ]; then  sudo rm -vf ${VAR_ENV}-tc-project-service-appvar.json; fi
+        ./buildenv.sh -e $DEPLOY_ENV -b ${VAR_ENV}-tc-project-service-consumers-deployvar
+        source buildenvvar
+        ./master_deploy.sh -d ECS -e $DEPLOY_ENV -t latest -s ${VAR_ENV}-global-appvar,${VAR_ENV}-tc-project-service-appvar -i tc-project-service -p FARGATE
+        
+jobs:
+  test:
+    docker:
+      - image: circleci/node:8.9.4
+      - image: circleci/postgres:9.6.2-alpine
+        environment:
+        - POSTGRES_USER: circle_test
+        - POSTGRES_DB: circle_test
+      - image: elasticsearch:2.3
+    environment:
+      DB_MASTER_URL: postgres://circle_test:@127.0.0.1:5432/circle_test
+      AUTH_SECRET: secret
+      AUTH_DOMAIN: topcoder-dev.com
+      LOG_LEVEL: debug
+      APP_VERSION: v4
+    steps:
+      - checkout
+      - restore_cache:
+          key: test-node-modules-{{ checksum "package.json" }}
+      - run: npm install
+      - save_cache:
+          key: test-node-modules-{{ checksum "package.json" }}
+          paths:
+            - node_modules
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist
+            
+  deployProd:
+    <<: *python_env
+    environment:
+      DEPLOY_ENV: "PROD"
+      VAR_ENV: "prod"
+    steps: *deploy_steps
+
+  deployDev:
+    <<: *python_env
+    environment:
+      DEPLOY_ENV: "DEV"
+      VAR_ENV: "dev"
+    steps: *deploy_steps 
+    
+workflows:
+  version: 2
+  build:
+    jobs:
+      - test
+      - deployDev:
+          context : org-global
+          requires:
+            - test
+          filters:
+            branches:
+              only: ['dev', 'dev-sts']
+      - deployProd:
+          context : org-global
+          requires:
+            - test
+          filters:
+            branches:
+              only: ['master']
