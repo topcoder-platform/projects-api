@@ -19,7 +19,7 @@
   "projectAttachmentPathSuffix": "attachments",
   "elasticsearchConfig": {
     "host": "",
-    "apiVersion": "6.7",
+    "apiVersion": "6.8",
     "indexName": "projects",
     "docType": "doc",
     "timelineIndexName": "timelines",
