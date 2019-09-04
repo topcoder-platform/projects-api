@@ -4,14 +4,11 @@
 import _ from 'lodash';
 import Promise from 'bluebird';
 import config from 'config';
-import { PROJECT_MEMBER_ROLE } from '../../constants';
 import util from '../../util';
-import models from '../../models';
 
 const ES_PROJECT_INDEX = config.get('elasticsearchConfig.indexName');
 const ES_PROJECT_TYPE = config.get('elasticsearchConfig.docType');
 const eClient = util.getElasticSearchClient();
-
 
 const updateESPromise = Promise.coroutine(function* a(logger, requestId, projectId, updateDocHandler) {
   try {
