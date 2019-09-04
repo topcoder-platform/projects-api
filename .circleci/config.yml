@@ -48,6 +48,11 @@ jobs:
       APPNAME: "projects-api"       
     steps:
       - checkout
+      - run:
+          name: "Install dependeency"
+          command: |
+              sudo apt update
+              sudo apt install python-pip
       - run: *install_awscli
       - run: *install_deploysuite
       - setup_remote_docker      
