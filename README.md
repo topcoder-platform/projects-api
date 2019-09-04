@@ -13,7 +13,7 @@ Microservice to manage CRUD operations for all things Projects.
 * Install [libpg](https://www.npmjs.com/package/pg-native)
 
 ### Steps to run locally
-1. Install node dependencies
+1. Install node dependencies 
    ```bash
    npm install
    ```
