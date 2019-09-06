@@ -47,7 +47,6 @@ describe('LIST project members', () => {
         })
         .then((project) => {
           id = project.id;
-
           // create members
           models.ProjectMember.create({
             id: 1,
