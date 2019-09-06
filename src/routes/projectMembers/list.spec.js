@@ -47,8 +47,9 @@ describe('LIST project members', () => {
         })
         .then((project) => {
           id = project.id;
+
           // create members
-          models.ProjectMember.bulkCreate([{
+          models.ProjectMember.create({
             id: 1,
             userId: copilotUser.userId,
             projectId: id,
@@ -56,15 +57,17 @@ describe('LIST project members', () => {
             isPrimary: false,
             createdBy: 1,
             updatedBy: 1,
-          }, {
-            id: 2,
-            userId: memberUser.userId,
-            projectId: id,
-            role: 'customer',
-            isPrimary: true,
-            createdBy: 1,
-            updatedBy: 1,
-          }]).then(() => done());
+          }).then(() => {
+            models.ProjectMember.create({
+              id: 2,
+              userId: memberUser.userId,
+              projectId: id,
+              role: 'customer',
+              isPrimary: true,
+              createdBy: 1,
+              updatedBy: 1,
+            }).then(() => done());
+          });
         });
       });
   });
@@ -137,8 +140,8 @@ describe('LIST project members', () => {
         .end((err, res) => {
           const resJson = res.body;
           resJson.should.have.length(2);
-          resJson[0].userId.should.be.eql(_.parseInt(memberUser.userId));
-          resJson[0].role.should.be.eql('customer');
+          resJson[0].userId.should.be.eql(copilotUser.userId);
+          resJson[0].role.should.be.eql('copilot');
           resJson[0].projectId.should.be.eql(id);
           should.exist(resJson[0].createdAt);
           should.exist(resJson[0].updatedAt);
@@ -151,7 +154,7 @@ describe('LIST project members', () => {
 
     it('should return 200 for admin with filter', (done) => {
       request(server)
-        .get(`/v5/projects/${id}/members?role=copilot`)
+        .get(`/v5/projects/${id}/members?role=customer`)
         .set({
           Authorization: `Bearer ${testUtil.jwts.admin}`,
         })
@@ -159,8 +162,8 @@ describe('LIST project members', () => {
         .end((err, res) => {
           const resJson = res.body;
           resJson.should.have.length(1);
-          resJson[0].userId.should.be.eql(copilotUser.userId);
-          resJson[0].role.should.be.eql('copilot');
+          resJson[0].userId.should.be.eql(_.parseInt(memberUser.userId));
+          resJson[0].role.should.be.eql('customer');
           resJson[0].projectId.should.be.eql(id);
           should.exist(resJson[0].createdAt);
           should.exist(resJson[0].updatedAt);

@@ -39,6 +39,9 @@ module.exports = [
     }
 
     util.fetchByIdFromES('members', {
+      sort: [
+        { id: { order: 'asc' } },
+      ],
       query: {
         nested: {
           path: 'members',
@@ -68,6 +71,10 @@ module.exports = [
         }
         return models.ProjectMember.findAll({
           where,
+          // Add order
+          order: [
+              ['id', 'ASC'],
+          ],
           attributes: { exclude: ['deletedAt', 'deletedBy'] },
           raw: true,
         })

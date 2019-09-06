@@ -68,10 +68,10 @@ describe('GET project member', () => {
               isPrimary: true,
               createdBy: 1,
               updatedBy: 1,
-            }).then((_member) => {
-              memberId2 = _member.id;
+            }).then((m) => {
+              memberId2 = m.id;
               done();
-            })
+            });
           });
         });
       });
