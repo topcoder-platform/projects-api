@@ -50,7 +50,7 @@ describe('GET project member', () => {
         .then((project) => {
           projectId = project.id;
           // create members
-          models.ProjectMember.bulkCreate([{
+          models.ProjectMember.create({
             id: 1,
             userId: copilotUser.userId,
             projectId,
@@ -58,18 +58,20 @@ describe('GET project member', () => {
             isPrimary: false,
             createdBy: 1,
             updatedBy: 1,
-          }, {
-            id: 2,
-            userId: memberUser.userId,
-            projectId,
-            role: 'customer',
-            isPrimary: true,
-            createdBy: 1,
-            updatedBy: 1,
-          }], { returning: true }).then((members) => {
-            memberId = members[0].id;
-            memberId2 = members[1].id;
-            done();
+          }).then((_member) => {
+            memberId = _member.id;
+            models.ProjectMember.create({
+              id: 2,
+              userId: memberUser.userId,
+              projectId,
+              role: 'customer',
+              isPrimary: true,
+              createdBy: 1,
+              updatedBy: 1,
+            }).then((m) => {
+              memberId2 = m.id;
+              done();
+            });
           });
         });
       });
@@ -142,7 +144,7 @@ describe('GET project member', () => {
         .expect(200, done);
     });
 
-    it('should return 200 for admin', (done) => {
+    it('should return 200 for admin when retrieve member with id=1', (done) => {
       request(server)
         .get(`/v5/projects/${projectId}/members/${memberId}`)
         .set({
@@ -163,7 +165,7 @@ describe('GET project member', () => {
         });
     });
 
-    it('should return 200 for admin with filter', (done) => {
+    it('should return 200 for admin when retrieve member with id=2', (done) => {
       request(server)
         .get(`/v5/projects/${projectId}/members/${memberId2}`)
         .set({
