@@ -2,7 +2,7 @@ version: 2
 python_env: &python_env
   docker:
     - image: circleci/python:2.7-stretch-browsers
-    
+
 install_awscli: &install_awscli
   name: "Install awscli"
   command: |
@@ -14,7 +14,7 @@ install_deploysuite: &install_deploysuite
     cp ./../buildscript/master_deploy.sh .
     cp ./../buildscript/buildenv.sh .
     cp ./../buildscript/awsconfiguration.sh .
-            
+
 # Instructions of deployment
 deploy_steps: &deploy_steps
   - checkout
@@ -25,14 +25,14 @@ deploy_steps: &deploy_steps
   - setup_remote_docker
   - run: docker build -t ${APPNAME}:latest .
   - deploy:
-      name: "Running Masterscript -  deploy tc-project-service " 
+      name: "Running Masterscript -  deploy tc-project-service "
       command: |
-        ./awsconfiguration.sh $DEPLOY_ENV  
+        ./awsconfiguration.sh $DEPLOY_ENV
         source awsenvconf
         ./buildenv.sh -e $DEPLOY_ENV -b ${LOGICAL_ENV}-${APPNAME}-deployvar
         source buildenvvar
         ./master_deploy.sh -d ECS -e $DEPLOY_ENV -t latest -s ${LOGICAL_ENV}-global-appvar,${LOGICAL_ENV}-${APPNAME}-appvar -i ${APPNAME}
-       
+
 jobs:
   test:
     docker:
@@ -42,10 +42,11 @@ jobs:
         - POSTGRES_USER: circle_test
         - POSTGRES_DB: circle_test
       - image: elasticsearch:2.3
+      - image: rabbitmq:3-management
     environment:
       DEPLOY_ENV: "DEV"
       LOGICAL_ENV: "dev"
-      APPNAME: "projects-api"       
+      APPNAME: "projects-api"
     steps:
       - checkout
       - run:
@@ -53,10 +54,10 @@ jobs:
           command: |
               sudo apt update
               sudo apt install curl
-              sudo apt install python-pip               
+              sudo apt install python-pip
       - run: *install_awscli
       - run: *install_deploysuite
-      - setup_remote_docker      
+      - setup_remote_docker
       - restore_cache:
           key: test-node-modules-{{ checksum "package.json" }}
       - run: npm install
@@ -66,12 +67,12 @@ jobs:
             - node_modules
       - run: npm run lint
       - run:
-          name: "Running Masterscript -  deploy tc-project-service " 
+          name: "Running Masterscript -  deploy tc-project-service "
           command: |
-            ./awsconfiguration.sh $DEPLOY_ENV  
+            ./awsconfiguration.sh $DEPLOY_ENV
             source awsenvconf
             ./buildenv.sh -e $DEPLOY_ENV -b ${LOGICAL_ENV}-${APPNAME}-testvar
-            source buildenvvar         
+            source buildenvvar
             npm run test
             rm -f buildenvvar
       - run: npm run build
@@ -79,13 +80,13 @@ jobs:
           root: .
           paths:
             - dist
-            
+
   deployProd:
     <<: *python_env
     environment:
       DEPLOY_ENV: "PROD"
       LOGICAL_ENV: "prod"
-      APPNAME: "projects-api" 
+      APPNAME: "projects-api"
     steps: *deploy_steps
 
   deployDev:
@@ -93,9 +94,9 @@ jobs:
     environment:
       DEPLOY_ENV: "DEV"
       LOGICAL_ENV: "dev"
-      APPNAME: "projects-api" 
-    steps: *deploy_steps 
-    
+      APPNAME: "projects-api"
+    steps: *deploy_steps
+
 workflows:
   version: 2
   build:

@@ -7,6 +7,7 @@ import server from '../../app';
 import models from '../../models';
 import testUtil from '../../tests/util';
 import busApi from '../../services/busApi';
+import { RESOURCES, BUS_API_EVENT } from '../../constants';
 
 const should = chai.should();
 
@@ -177,7 +178,7 @@ describe('Phase Products', () => {
       request(server)
         .post(`/v5/projects/99999/phases/${phaseId}/products`)
         .set({
-          Authorization: `Bearer ${testUtil.jwts.manager}`,
+          Authorization: `Bearer ${testUtil.jwts.connectAdmin}`,
         })
         .send(body)
         .expect('Content-Type', /json/)
@@ -188,7 +189,7 @@ describe('Phase Products', () => {
       request(server)
         .post(`/v5/projects/${projectId}/phases/99999/products`)
         .set({
-          Authorization: `Bearer ${testUtil.jwts.manager}`,
+          Authorization: `Bearer ${testUtil.jwts.connectAdmin}`,
         })
         .send(body)
         .expect('Content-Type', /json/)
@@ -220,6 +221,68 @@ describe('Phase Products', () => {
         });
     });
 
+    it('should return 201 if requested by admin', (done) => {
+      request(server)
+        .post(`/v5/projects/${projectId}/phases/${phaseId}/products`)
+        .set({
+          Authorization: `Bearer ${testUtil.jwts.connectAdmin}`,
+        })
+        .send(body)
+        .expect('Content-Type', /json/)
+        .expect(201)
+        .end(done);
+    });
+
+    it('should return 201 if requested by manager which is a member', (done) => {
+      models.ProjectMember.create({
+        id: 3,
+        userId: testUtil.userIds.manager,
+        projectId,
+        role: 'manager',
+        isPrimary: false,
+        createdBy: 1,
+        updatedBy: 1,
+      }).then(() => {
+        request(server)
+          .post(`/v5/projects/${projectId}/phases/${phaseId}/products`)
+          .set({
+            Authorization: `Bearer ${testUtil.jwts.manager}`,
+          })
+          .send(body)
+          .expect('Content-Type', /json/)
+          .expect(201)
+          .end(done);
+      });
+    });
+
+    it('should return 403 if requested by manager which is not a member', (done) => {
+      request(server)
+        .post(`/v5/projects/${projectId}/phases/${phaseId}/products`)
+        .set({
+          Authorization: `Bearer ${testUtil.jwts.manager}`,
+        })
+        .send(body)
+        .expect('Content-Type', /json/)
+        .expect(403)
+        .end(done);
+    });
+
+    it('should return 403 if requested by non-member copilot', (done) => {
+      models.ProjectMember.destroy({
+        where: { userId: testUtil.userIds.copilot, projectId },
+      }).then(() => {
+        request(server)
+          .post(`/v5/projects/${projectId}/phases/${phaseId}/products`)
+          .set({
+            Authorization: `Bearer ${testUtil.jwts.copilot}`,
+          })
+          .send(body)
+          .expect('Content-Type', /json/)
+          .expect(403)
+          .end(done);
+      });
+    });
+
     describe('Bus api', () => {
       let createEventSpy;
       const sandbox = sinon.sandbox.create();
@@ -237,7 +300,7 @@ describe('Phase Products', () => {
         sandbox.restore();
       });
 
-      it('should not send message BUS_API_EVENT.PROJECT_PHASE_PRODUCT_ADDED when product phase created', (done) => {
+      it('should send correct BUS API messages when product phase created', (done) => {
         request(server)
         .post(`/v5/projects/${projectId}/phases/${phaseId}/products`)
         .set({
@@ -251,7 +314,12 @@ describe('Phase Products', () => {
               done(err);
             } else {
               testUtil.wait(() => {
-                createEventSpy.calledOnce.should.be.true;
+                createEventSpy.callCount.should.be.eql(1);
+
+                createEventSpy.calledWith(BUS_API_EVENT.PROJECT_PHASE_CREATED, sinon.match({
+                  resource: RESOURCES.PHASE_PRODUCT,
+                })).should.be.true;
+
                 done();
               });
             }

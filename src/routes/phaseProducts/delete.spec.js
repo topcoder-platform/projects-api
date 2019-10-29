@@ -7,6 +7,7 @@ import server from '../../app';
 import models from '../../models';
 import testUtil from '../../tests/util';
 import busApi from '../../services/busApi';
+import { BUS_API_EVENT, RESOURCES } from '../../constants';
 
 const should = chai.should(); // eslint-disable-line no-unused-vars
 
@@ -152,7 +153,7 @@ describe('Phase Products', () => {
       request(server)
         .delete(`/v5/projects/999/phases/${phaseId}/products/${productId}`)
         .set({
-          Authorization: `Bearer ${testUtil.jwts.manager}`,
+          Authorization: `Bearer ${testUtil.jwts.connectAdmin}`,
         })
         .expect('Content-Type', /json/)
         .expect(404, done);
@@ -162,7 +163,7 @@ describe('Phase Products', () => {
       request(server)
         .delete(`/v5/projects/${projectId}/phases/99999/products/${productId}`)
         .set({
-          Authorization: `Bearer ${testUtil.jwts.manager}`,
+          Authorization: `Bearer ${testUtil.jwts.connectAdmin}`,
         })
         .expect('Content-Type', /json/)
         .expect(404, done);
@@ -172,7 +173,7 @@ describe('Phase Products', () => {
       request(server)
         .delete(`/v5/projects/${projectId}/phases/${phaseId}/products/99999`)
         .set({
-          Authorization: `Bearer ${testUtil.jwts.manager}`,
+          Authorization: `Bearer ${testUtil.jwts.connectAdmin}`,
         })
         .expect('Content-Type', /json/)
         .expect(404, done);
@@ -186,6 +187,60 @@ describe('Phase Products', () => {
         })
         .expect(204)
         .end(err => expectAfterDelete(projectId, phaseId, productId, err, done));
+    });
+
+    it('should return 204 if requested by admin', (done) => {
+      request(server)
+        .delete(`/v5/projects/${projectId}/phases/${phaseId}/products/${productId}`)
+        .set({
+          Authorization: `Bearer ${testUtil.jwts.connectAdmin}`,
+        })
+        .expect(204)
+        .end(done);
+    });
+
+    it('should return 204 if requested by manager which is a member', (done) => {
+      models.ProjectMember.create({
+        id: 3,
+        userId: testUtil.userIds.manager,
+        projectId,
+        role: 'manager',
+        isPrimary: false,
+        createdBy: 1,
+        updatedBy: 1,
+      }).then(() => {
+        request(server)
+          .delete(`/v5/projects/${projectId}/phases/${phaseId}/products/${productId}`)
+          .set({
+            Authorization: `Bearer ${testUtil.jwts.manager}`,
+          })
+          .expect(204)
+          .end(done);
+      });
+    });
+
+    it('should return 403 if requested by manager which is not a member', (done) => {
+      request(server)
+        .delete(`/v5/projects/${projectId}/phases/${phaseId}/products/${productId}`)
+        .set({
+          Authorization: `Bearer ${testUtil.jwts.manager}`,
+        })
+        .expect(403)
+        .end(done);
+    });
+
+    it('should return 403 if requested by non-member copilot', (done) => {
+      models.ProjectMember.destroy({
+        where: { userId: testUtil.userIds.copilot, projectId },
+      }).then(() => {
+        request(server)
+        .delete(`/v5/projects/${projectId}/phases/${phaseId}/products/${productId}`)
+        .set({
+          Authorization: `Bearer ${testUtil.jwts.copilot}`,
+        })
+        .expect(403)
+        .end(done);
+      });
     });
 
     describe('Bus api', () => {
@@ -205,7 +260,7 @@ describe('Phase Products', () => {
         sandbox.restore();
       });
 
-      it('should send message BUS_API_EVENT.PROJECT_PHASE_PRODUCT_REMOVED when product phase removed', (done) => {
+      it('should send correct BUS API messages when product phase removed', (done) => {
         request(server)
           .delete(`/v5/projects/${projectId}/phases/${phaseId}/products/${productId}`)
           .set({
@@ -217,7 +272,12 @@ describe('Phase Products', () => {
               done(err);
             } else {
               testUtil.wait(() => {
-                createEventSpy.calledOnce.should.be.true;
+                createEventSpy.callCount.should.be.eql(1);
+
+                createEventSpy.calledWith(BUS_API_EVENT.PROJECT_PHASE_DELETED, sinon.match({
+                  resource: RESOURCES.PHASE_PRODUCT,
+                })).should.be.true;
+
                 done();
               });
             }
