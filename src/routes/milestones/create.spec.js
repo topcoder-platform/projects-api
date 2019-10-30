@@ -10,7 +10,7 @@ import server from '../../app';
 import testUtil from '../../tests/util';
 import models from '../../models';
 import busApi from '../../services/busApi';
-import { EVENT, RESOURCES, BUS_API_EVENT } from '../../constants';
+import { EVENT, RESOURCES, BUS_API_EVENT, CONNECT_NOTIFICATION_EVENT } from '../../constants';
 
 const should = chai.should();
 
@@ -142,11 +142,12 @@ describe('CREATE milestone', () => {
                 // Create milestones
                 models.Milestone.bulkCreate([
                   {
+                    id: 11,
                     timelineId: 1,
                     name: 'milestone 1',
                     duration: 2,
                     startDate: '2018-05-03T00:00:00.000Z',
-                    status: 'open',
+                    status: 'draft',
                     type: 'type1',
                     details: {
                       detail1: {
@@ -164,11 +165,12 @@ describe('CREATE milestone', () => {
                     updatedBy: 2,
                   },
                   {
+                    id: 12,
                     timelineId: 1,
                     name: 'milestone 2',
                     duration: 3,
                     startDate: '2018-05-04T00:00:00.000Z',
-                    status: 'open',
+                    status: 'draft',
                     type: 'type2',
                     order: 2,
                     plannedText: 'plannedText 2',
@@ -179,11 +181,12 @@ describe('CREATE milestone', () => {
                     updatedBy: 3,
                   },
                   {
+                    id: 13,
                     timelineId: 1,
                     name: 'milestone 3',
                     duration: 4,
                     startDate: '2018-05-04T00:00:00.000Z',
-                    status: 'open',
+                    status: 'draft',
                     type: 'type3',
                     order: 3,
                     plannedText: 'plannedText 3',
@@ -212,7 +215,7 @@ describe('CREATE milestone', () => {
       startDate: '2018-05-05T00:00:00.000Z',
       endDate: '2018-05-07T00:00:00.000Z',
       completionDate: '2018-05-08T00:00:00.000Z',
-      status: 'open',
+      status: 'draft',
       type: 'type4',
       details: {
         detail1: {
@@ -309,66 +312,6 @@ describe('CREATE milestone', () => {
         .expect(400, done);
     });
 
-    it('should return 400 if missing plannedText', (done) => {
-      const invalidBody = _.assign({}, body, {
-        plannedText: undefined,
-      });
-
-      request(server)
-        .post('/v5/timelines/1/milestones')
-        .set({
-          Authorization: `Bearer ${testUtil.jwts.admin}`,
-        })
-        .send(invalidBody)
-        .expect('Content-Type', /json/)
-        .expect(400, done);
-    });
-
-    it('should return 400 if missing activeText', (done) => {
-      const invalidBody = _.assign({}, body, {
-        activeText: undefined,
-      });
-
-      request(server)
-        .post('/v5/timelines/1/milestones')
-        .set({
-          Authorization: `Bearer ${testUtil.jwts.admin}`,
-        })
-        .send(invalidBody)
-        .expect('Content-Type', /json/)
-        .expect(400, done);
-    });
-
-    it('should return 400 if missing completedText', (done) => {
-      const invalidBody = _.assign({}, body, {
-        completedText: undefined,
-      });
-
-      request(server)
-        .post('/v5/timelines/1/milestones')
-        .set({
-          Authorization: `Bearer ${testUtil.jwts.admin}`,
-        })
-        .send(invalidBody)
-        .expect('Content-Type', /json/)
-        .expect(400, done);
-    });
-
-    it('should return 400 if missing blockedText', (done) => {
-      const invalidBody = _.assign({}, body, {
-        blockedText: undefined,
-      });
-
-      request(server)
-        .post('/v5/timelines/1/milestones')
-        .set({
-          Authorization: `Bearer ${testUtil.jwts.admin}`,
-        })
-        .send(invalidBody)
-        .expect('Content-Type', /json/)
-        .expect(400, done);
-    });
-
     it('should return 400 if startDate is after endDate', (done) => {
       const invalidBody = _.assign({}, body, {
         startDate: '2018-05-29T00:00:00.000Z',
@@ -404,21 +347,6 @@ describe('CREATE milestone', () => {
     it('should return 400 if startDate is before the timeline startDate', (done) => {
       const invalidBody = _.assign({}, body, {
         startDate: '2018-05-01T00:00:00.000Z',
-      });
-
-      request(server)
-        .post('/v5/timelines/1/milestones')
-        .set({
-          Authorization: `Bearer ${testUtil.jwts.admin}`,
-        })
-        .send(invalidBody)
-        .expect('Content-Type', /json/)
-        .expect(400, done);
-    });
-
-    it('should return 400 if endDate is after the timeline endDate', (done) => {
-      const invalidBody = _.assign({}, body, {
-        endDate: '2018-06-13T00:00:00.000Z',
       });
 
       request(server)
@@ -499,6 +427,15 @@ describe('CREATE milestone', () => {
           should.not.exist(resJson.deletedBy);
           should.not.exist(resJson.deletedAt);
 
+          // validate statusHistory
+          should.exist(resJson.statusHistory);
+          resJson.statusHistory.should.be.an('array');
+          resJson.statusHistory.length.should.be.eql(1);
+          resJson.statusHistory.forEach((statusHistory) => {
+            statusHistory.reference.should.be.eql('milestone');
+            statusHistory.referenceId.should.be.eql(resJson.id);
+          });
+
           // eslint-disable-next-line no-unused-expressions
           server.services.pubsub.publish.calledWith(EVENT.ROUTING_KEY.MILESTONE_ADDED).should.be.true;
 
@@ -506,11 +443,11 @@ describe('CREATE milestone', () => {
           models.Milestone.findAll({ where: { timelineId: 1 } })
             .then((milestones) => {
               _.each(milestones, (milestone) => {
-                if (milestone.id === 1) {
+                if (milestone.id === 11) {
                   milestone.order.should.be.eql(1);
-                } else if (milestone.id === 2) {
+                } else if (milestone.id === 12) {
                   milestone.order.should.be.eql(2 + 1);
-                } else if (milestone.id === 3) {
+                } else if (milestone.id === 13) {
                   milestone.order.should.be.eql(3 + 1);
                 }
               });
@@ -605,7 +542,7 @@ describe('CREATE milestone', () => {
         sandbox.restore();
       });
 
-      it('should send message BUS_API_EVENT.MILESTONE_ADDED when milestone created', (done) => {
+      it('sends send correct BUS API messages milestone created', (done) => {
         request(server)
           .post('/v5/timelines/1/milestones')
           .set({
@@ -619,13 +556,35 @@ describe('CREATE milestone', () => {
               done(err);
             } else {
               testUtil.wait(() => {
-                createEventSpy.callCount.should.be.eql(3);
-                createEventSpy.calledWith(BUS_API_EVENT.MILESTONE_ADDED,
-                  sinon.match({ resource: RESOURCES.MILESTONE })).should.be.true;
-                createEventSpy.calledWith(BUS_API_EVENT.MILESTONE_ADDED,
-                  sinon.match({ name: 'milestone 4' })).should.be.true;
-                createEventSpy.calledWith(BUS_API_EVENT.MILESTONE_ADDED,
-                  sinon.match({ description: 'description 4' })).should.be.true;
+                createEventSpy.callCount.should.be.eql(4);
+
+                // added a new milestone
+                createEventSpy.calledWith(BUS_API_EVENT.MILESTONE_ADDED, sinon.match({
+                  resource: RESOURCES.MILESTONE,
+                  name: 'milestone 4',
+                  description: 'description 4',
+                  order: 2,
+                })).should.be.true;
+
+                // as order of the next milestones after the added one have been updated, we send events about their update
+                createEventSpy.calledWith(BUS_API_EVENT.MILESTONE_UPDATED, sinon.match({
+                  resource: RESOURCES.MILESTONE,
+                  order: 3,
+                })).should.be.true;
+                createEventSpy.calledWith(BUS_API_EVENT.MILESTONE_UPDATED, sinon.match({
+                  resource: RESOURCES.MILESTONE,
+                  order: 4,
+                })).should.be.true;
+
+                // Check Notification Service events
+                createEventSpy.calledWith(CONNECT_NOTIFICATION_EVENT.MILESTONE_ADDED, sinon.match({
+                  projectId: 1,
+                  projectName: 'test1',
+                  projectUrl: 'https://local.topcoder-dev.com/projects/1',
+                  userId: 40051332,
+                  initiatorUserId: 40051332,
+                })).should.be.true;
+
                 done();
               });
             }

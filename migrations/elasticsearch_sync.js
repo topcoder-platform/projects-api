@@ -673,6 +673,7 @@ function getRequestBody(indexName) {
         updateAllTypes: true,
         body: {
           mappings: { },
+          refresh: 'wait_for',
         },
       };
       result.body.mappings[ES_PROJECT_TYPE] = projectMapping;
@@ -683,6 +684,7 @@ function getRequestBody(indexName) {
         updateAllTypes: true,
         body: {
           mappings: { },
+          refresh: 'wait_for',
         },
       };
       result.body.mappings[ES_METADATA_TYPE] = metadataMapping;
@@ -693,6 +695,7 @@ function getRequestBody(indexName) {
         updateAllTypes: true,
         body: {
           mappings: { },
+          refresh: 'wait_for',
         },
       };
       result.body.mappings[ES_TIMELINE_TYPE] = timelineMapping;
@@ -703,24 +706,39 @@ function getRequestBody(indexName) {
   return result;
 }
 
-    // first delete the index if already present
-esClient.indices.delete({
-  index: ES_PROJECT_INDEX,
-  // we would want to ignore no such index error
-  ignore: [404],
-})
-.then(() => esClient.indices.create(getRequestBody(ES_PROJECT_INDEX)))
-// Re-create timeline index
-.then(() => esClient.indices.delete({ index: ES_TIMELINE_INDEX, ignore: [404] }))
-.then(() => esClient.indices.create(getRequestBody(ES_TIMELINE_INDEX)))
-// Re-create metadata index
-.then(() => esClient.indices.delete({ index: ES_METADATA_INDEX, ignore: [404] }))
-.then(() => esClient.indices.create(getRequestBody(ES_METADATA_INDEX)))
-.then(() => {
-  console.log('elasticsearch indices synced successfully');
-  process.exit();
-})
-.catch((err) => {
-  console.error('elasticsearch indices sync failed', err);
-  process.exit();
-});
+/**
+ * Sync elasticsearch indices.
+ *
+ * @returns {undefined}
+ */
+function sync() {
+      // first delete the index if already present
+  return esClient.indices.delete({
+    index: ES_PROJECT_INDEX,
+    // we would want to ignore no such index error
+    ignore: [404],
+  })
+  .then(() => esClient.indices.create(getRequestBody(ES_PROJECT_INDEX)))
+  // Re-create timeline index
+  .then(() => esClient.indices.delete({ index: ES_TIMELINE_INDEX, ignore: [404] }))
+  .then(() => esClient.indices.create(getRequestBody(ES_TIMELINE_INDEX)))
+  // Re-create metadata index
+  .then(() => esClient.indices.delete({ index: ES_METADATA_INDEX, ignore: [404] }))
+  .then(() => esClient.indices.create(getRequestBody(ES_METADATA_INDEX)));
+}
+
+if (!module.parent) {
+  sync()
+    .then(() => {
+      console.log('elasticsearch indices synced successfully');
+      process.exit();
+    })
+    .catch((err) => {
+      console.error('elasticsearch indices sync failed', err);
+      process.exit();
+    });
+}
+
+module.exports = {
+  sync,
+};

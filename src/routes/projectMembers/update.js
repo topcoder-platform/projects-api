@@ -15,8 +15,17 @@ const permissions = tcMiddleware.permissions;
 const updateProjectMemberValdiations = {
   body: Joi.object().keys({
     isPrimary: Joi.boolean(),
-    role: Joi.any().valid(PROJECT_MEMBER_ROLE.CUSTOMER, PROJECT_MEMBER_ROLE.MANAGER,
-        PROJECT_MEMBER_ROLE.ACCOUNT_MANAGER, PROJECT_MEMBER_ROLE.COPILOT, PROJECT_MEMBER_ROLE.OBSERVER).required(),
+    role: Joi.any().valid(
+      PROJECT_MEMBER_ROLE.CUSTOMER,
+      PROJECT_MEMBER_ROLE.MANAGER,
+      PROJECT_MEMBER_ROLE.ACCOUNT_MANAGER,
+      PROJECT_MEMBER_ROLE.COPILOT,
+      PROJECT_MEMBER_ROLE.OBSERVER,
+      PROJECT_MEMBER_ROLE.PROGRAM_MANAGER,
+      PROJECT_MEMBER_ROLE.ACCOUNT_EXECUTIVE,
+      PROJECT_MEMBER_ROLE.SOLUTION_ARCHITECT,
+      PROJECT_MEMBER_ROLE.PROJECT_MANAGER,
+    ).required(),
   }),
 };
 
@@ -104,7 +113,8 @@ module.exports = [
               req,
               EVENT.ROUTING_KEY.PROJECT_MEMBER_UPDATED,
               RESOURCES.PROJECT_MEMBER,
-              projectMember);
+              projectMember,
+              previousValue);
           req.log.debug('updated project member', projectMember);
           res.json(projectMember);
         })

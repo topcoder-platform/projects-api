@@ -9,14 +9,13 @@ import chai from 'chai';
 import models from '../../models';
 import server from '../../app';
 import testUtil from '../../tests/util';
-import { EVENT, RESOURCES, BUS_API_EVENT } from '../../constants';
+import { EVENT, RESOURCES, BUS_API_EVENT, CONNECT_NOTIFICATION_EVENT } from '../../constants';
 import busApi from '../../services/busApi';
 
 const should = chai.should(); // eslint-disable-line no-unused-vars
 
 const expectAfterDelete = (timelineId, id, err, next) => {
   if (err) throw err;
-  setTimeout(() =>
   models.Milestone.findOne({
     where: {
       timelineId,
@@ -30,12 +29,21 @@ const expectAfterDelete = (timelineId, id, err, next) => {
       } else {
         chai.assert.isNotNull(res.deletedAt);
         chai.assert.isNotNull(res.deletedBy);
+
+        request(server)
+          .get(`/v5/timelines/${timelineId}/milestones/${id}`)
+          .set({
+            Authorization: `Bearer ${testUtil.jwts.admin}`,
+          })
+          .expect(404, next);
       }
-      next();
-    }), 500);
+    });
 };
 
 describe('DELETE milestone', () => {
+  before((done) => {
+    testUtil.clearES(done);
+  });
   beforeEach((done) => {
     testUtil.clearDb()
       .then(() => {
@@ -157,6 +165,7 @@ describe('DELETE milestone', () => {
                 // Create milestones
                 models.Milestone.bulkCreate([
                   {
+                    id: 1,
                     timelineId: 1,
                     name: 'milestone 1',
                     duration: 2,
@@ -179,6 +188,7 @@ describe('DELETE milestone', () => {
                     updatedBy: 2,
                   },
                   {
+                    id: 2,
                     timelineId: 1,
                     name: 'milestone 2',
                     duration: 3,
@@ -194,6 +204,7 @@ describe('DELETE milestone', () => {
                     updatedBy: 3,
                   },
                   {
+                    id: 3,
                     timelineId: 1,
                     name: 'milestone 3',
                     duration: 4,
@@ -371,7 +382,7 @@ describe('DELETE milestone', () => {
         sandbox.restore();
       });
 
-      it('should send message BUS_API_EVENT.MILESTONE_REMOVED when milestone removed', (done) => {
+      it('sends send correct BUS API messages when milestone removed', (done) => {
         request(server)
           .delete('/v5/timelines/1/milestones/1')
           .set({
@@ -383,11 +394,22 @@ describe('DELETE milestone', () => {
               done(err);
             } else {
               testUtil.wait(() => {
-                createEventSpy.calledOnce.should.be.true;
-                createEventSpy.calledWith(BUS_API_EVENT.MILESTONE_REMOVED,
-                  sinon.match({ resource: RESOURCES.MILESTONE })).should.be.true;
-                createEventSpy.calledWith(BUS_API_EVENT.MILESTONE_REMOVED,
-                  sinon.match({ id: 1 })).should.be.true;
+                createEventSpy.callCount.should.be.eql(2);
+
+                createEventSpy.calledWith(BUS_API_EVENT.MILESTONE_REMOVED, sinon.match({
+                  resource: RESOURCES.MILESTONE,
+                  id: 1,
+                })).should.be.true;
+
+                // Check Notification Service events
+                createEventSpy.calledWith(CONNECT_NOTIFICATION_EVENT.MILESTONE_REMOVED, sinon.match({
+                  projectId: 1,
+                  projectName: 'test1',
+                  projectUrl: 'https://local.topcoder-dev.com/projects/1',
+                  userId: 40051332,
+                  initiatorUserId: 40051332,
+                })).should.be.true;
+
                 done();
               });
             }

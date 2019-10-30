@@ -9,7 +9,7 @@ import _ from 'lodash';
 import models from '../../models';
 import server from '../../app';
 import testUtil from '../../tests/util';
-import { EVENT, BUS_API_EVENT, RESOURCES } from '../../constants';
+import { EVENT, BUS_API_EVENT, RESOURCES, CONNECT_NOTIFICATION_EVENT } from '../../constants';
 import busApi from '../../services/busApi';
 
 const should = chai.should();
@@ -470,6 +470,19 @@ describe('UPDATE timeline', () => {
           should.not.exist(resJson.deletedAt);
           should.not.exist(resJson.deletedBy);
 
+          // Milestones
+          resJson.milestones.should.have.length(2);
+          resJson.milestones.forEach((milestone) => {
+            // validate statusHistory
+            should.exist(milestone.statusHistory);
+            milestone.statusHistory.should.be.an('array');
+            milestone.statusHistory.length.should.be.eql(1);
+            milestone.statusHistory.forEach((statusHistory) => {
+              statusHistory.reference.should.be.eql('milestone');
+              statusHistory.referenceId.should.be.eql(milestone.id);
+            });
+          });
+
           // eslint-disable-next-line no-unused-expressions
           server.services.pubsub.publish.calledWith(EVENT.ROUTING_KEY.TIMELINE_UPDATED).should.be.true;
 
@@ -621,7 +634,7 @@ describe('UPDATE timeline', () => {
 
       // not testing fields separately as startDate is required parameter,
       // thus TIMELINE_ADJUSTED will be always sent
-      it('should send message BUS_API_EVENT.TIMELINE_UPDATED when timeline updated', (done) => {
+      it('should send correct BUS API messages when timeline updated', (done) => {
         request(server)
           .patch('/v5/timelines/1')
           .set({
@@ -634,9 +647,22 @@ describe('UPDATE timeline', () => {
               done(err);
             } else {
               testUtil.wait(() => {
-                createEventSpy.calledOnce.should.be.true;
-                createEventSpy.calledWith(BUS_API_EVENT.TIMELINE_UPDATED,
-                  sinon.match({ resource: RESOURCES.TIMELINE })).should.be.true;
+                createEventSpy.callCount.should.equal(2);
+
+                createEventSpy.calledWith(BUS_API_EVENT.TIMELINE_UPDATED, sinon.match({
+                  resource: RESOURCES.TIMELINE,
+                  name: body.name,
+                })).should.be.true;
+
+                // Check Notification Service events
+                createEventSpy.calledWith(CONNECT_NOTIFICATION_EVENT.TIMELINE_ADJUSTED, sinon.match({
+                  projectId: 1,
+                  projectName: 'test1',
+                  projectUrl: 'https://local.topcoder-dev.com/projects/1',
+                  userId: 40051332,
+                  initiatorUserId: 40051332,
+                })).should.be.true;
+
                 done();
               });
             }

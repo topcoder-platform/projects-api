@@ -6,7 +6,7 @@ import Sequelize from 'sequelize';
 import { middleware as tcMiddleware } from 'tc-core-library-js';
 import models from '../../models';
 import util from '../../util';
-import { EVENT, RESOURCES } from '../../constants';
+import { EVENT, RESOURCES, TIMELINE_REFERENCES, ROUTES } from '../../constants';
 
 
 const permissions = tcMiddleware.permissions;
@@ -14,6 +14,8 @@ const permissions = tcMiddleware.permissions;
 const updateProjectPhaseValidation = {
   body: Joi.object().keys({
     name: Joi.string().optional(),
+    description: Joi.string().optional(),
+    requirements: Joi.string().optional(),
     status: Joi.string().optional(),
     startDate: Joi.date().optional(),
     endDate: Joi.date().optional(),
@@ -149,10 +151,12 @@ module.exports = [
       .then((allPhases) => {
         req.log.debug('updated project phase', JSON.stringify(updated, null, 2));
 
+        const updatedValue = updated.get({ plain: true });
+
         // emit original and updated project phase information
         req.app.services.pubsub.publish(
           EVENT.ROUTING_KEY.PROJECT_PHASE_UPDATED,
-          { original: previousValue, updated, allPhases },
+          { original: previousValue, updated: updatedValue, allPhases, route: TIMELINE_REFERENCES.PHASE },
           { correlationId: req.id },
         );
 
@@ -161,7 +165,9 @@ module.exports = [
           req,
           EVENT.ROUTING_KEY.PROJECT_PHASE_UPDATED,
           RESOURCES.PHASE,
-          _.assign(updatedProps, _.pick(updated, 'id', 'updatedAt')));
+          updatedValue,
+          previousValue,
+          ROUTES.PHASES.UPDATE);
 
         res.json(updated);
       })
