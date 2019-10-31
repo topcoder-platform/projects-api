@@ -13,7 +13,6 @@ Microservice to manage CRUD operations for all things Projects.
 * Install [libpg](https://www.npmjs.com/package/pg-native)
 
 ### Steps to run locally
-
 1. Install node dependencies
    ```bash
    npm install
@@ -142,5 +141,4 @@ You may replace 172.17.0.1 with your docker0 IP.
 You can paste **swagger.yaml** to  [swagger editor](http://editor.swagger.io/) or import **postman.json** and **postman_environment.json** to verify endpoints.
 
 #### Deploying without docker
-
 If you don't want to use docker to deploy to localhost. You can simply run `npm run start:dev` from root of project. This should start the server on default port `8001`.
