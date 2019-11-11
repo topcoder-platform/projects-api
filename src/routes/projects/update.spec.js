@@ -23,6 +23,7 @@ describe('Project', () => {
   let project3;
   beforeEach((done) => {
     testUtil.clearDb()
+      .then(() => testUtil.clearES())
       .then(() => models.ProjectType.bulkCreate([
         {
           key: 'generic',
@@ -202,7 +203,7 @@ describe('Project', () => {
           if (err) {
             done(err);
           } else {
-            const resJson = res.body.result.content;
+            const resJson = res.body;
             should.exist(resJson);
             resJson.name.should.equal('updatedProject name');
             resJson.updatedAt.should.not.equal('2016-06-30 00:33:07+00');
@@ -231,7 +232,7 @@ describe('Project', () => {
           if (err) {
             done(err);
           } else {
-            const resJson = res.body.result.content;
+            const resJson = res.body;
             should.exist(resJson);
             resJson.name.should.equal('updatedProject name');
             resJson.updatedAt.should.not.equal('2016-06-30 00:33:07+00');
@@ -277,7 +278,7 @@ describe('Project', () => {
           if (err) {
             done(err);
           } else {
-            const resJson = res.body.result.content;
+            const resJson = res.body;
             should.exist(resJson);
             resJson.name.should.equal('updatedProject name');
             resJson.updatedAt.should.not.equal('2016-06-30 00:33:07+00');
@@ -352,7 +353,7 @@ describe('Project', () => {
           if (err) {
             done(err);
           } else {
-            const resJson = res.body.result.content;
+            const resJson = res.body;
             should.exist(resJson);
             resJson.name.should.equal('updatedProject name');
             resJson.updatedAt.should.not.equal('2016-06-30 00:33:07+00');
@@ -403,7 +404,7 @@ describe('Project', () => {
               if (err) {
                 done(err);
               } else {
-                const resJson = res.body.result.content;
+                const resJson = res.body;
                 should.exist(resJson);
                 resJson.name.should.equal('updatedProject name');
                 resJson.updatedAt.should.not.equal('2016-06-30 00:33:07+00');
@@ -455,7 +456,7 @@ describe('Project', () => {
               if (err) {
                 done(err);
               } else {
-                const resJson = res.body.result.content;
+                const resJson = res.body;
                 should.exist(resJson);
                 resJson.name.should.equal('updatedProject name');
                 resJson.updatedAt.should.not.equal('2016-06-30 00:33:07+00');
@@ -531,7 +532,7 @@ describe('Project', () => {
           if (err) {
             done(err);
           } else {
-            const resJson = res.body.result.content;
+            const resJson = res.body;
             should.exist(resJson);
             resJson.name.should.equal('updatedProject name');
             resJson.updatedAt.should.not.equal('2016-06-30 00:33:07+00');
@@ -567,7 +568,7 @@ describe('Project', () => {
           if (err) {
             done(err);
           } else {
-            const resJson = res.body.result.content;
+            const resJson = res.body;
             should.exist(resJson);
             resJson.billingAccountId.should.equal(123);
             resJson.updatedAt.should.not.equal('2016-06-30 00:33:07+00');
@@ -594,7 +595,7 @@ describe('Project', () => {
           if (err) {
             done(err);
           } else {
-            const resJson = res.body.result.content;
+            const resJson = res.body;
             should.exist(resJson);
             resJson.billingAccountId.should.equal(1);
             resJson.billingAccountId.should.equal(1);
@@ -619,7 +620,7 @@ describe('Project', () => {
           if (err) {
             done(err);
           } else {
-            const resJson = res.body.result.content;
+            const resJson = res.body;
             should.exist(resJson);
             resJson.billingAccountId.should.equal(1);
             resJson.updatedAt.should.not.equal('2016-06-30 00:33:07+00');
@@ -648,7 +649,7 @@ describe('Project', () => {
           if (err) {
             done(err);
           } else {
-            let resJson = res.body.result.content;
+            let resJson = res.body;
             should.exist(resJson);
             resJson.bookmarks.should.have.lengthOf(1);
             resJson.bookmarks[0].title.should.be.eql('title1');
@@ -668,7 +669,7 @@ describe('Project', () => {
                 if (error) {
                   done(error);
                 } else {
-                  resJson = resp.body.result.content;
+                  resJson = resp.body;
                   should.exist(resJson);
                   should.not.exist(resJson.bookmarks);
                   server.services.pubsub.publish.calledWith('project.updated').should.be.true;
@@ -707,7 +708,7 @@ describe('Project', () => {
                 if (err) {
                   done(err);
                 } else {
-                  const resJson = res.body.result.content;
+                  const resJson = res.body;
                   should.exist(resJson);
                   resJson.name.should.equal('updatedProject name');
                   resJson.updatedAt.should.not.equal('2016-06-30 00:33:07+00');
