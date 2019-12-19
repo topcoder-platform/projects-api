@@ -109,11 +109,11 @@ workflows:
             - test
           filters:
             branches:
-              only: ['develop']
+              only: ['non-existing-develop']
       - deployProd:
           context : org-global
           requires:
             - test
           filters:
             branches:
-              only: ['master']
+              only: ['non-existing-master']
