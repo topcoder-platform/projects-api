@@ -546,7 +546,7 @@ module.exports = [
       'type', 'type asc', 'type desc',
     ];
     if (!util.isValidFilter(filters,
-      ['id', 'status', 'memberOnly', 'keyword', 'type', 'name', 'code', 'customer', 'manager']) ||
+      ['id', 'status', 'memberOnly', 'keyword', 'type', 'name', 'code', 'customer', 'manager', 'directProjectId']) ||
       (sort && _.indexOf(sortableProps, sort) < 0)) {
       return util.handleError('Invalid filters or sort', null, req, next);
     }
