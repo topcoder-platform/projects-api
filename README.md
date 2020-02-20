@@ -1,4 +1,6 @@
-# Topcoder Projects Service
+# ~Topcoder Projects Service~
+# MOVED
+This has been merged into this repo for the v5 projects API: https://github.com/topcoder-platform/tc-project-service
 
 Microservice to manage CRUD operations for all things Projects.
 
